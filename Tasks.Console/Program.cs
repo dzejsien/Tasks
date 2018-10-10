@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -479,14 +480,100 @@ namespace Tasks.ConsoleApp
         //}
         #endregion
 
-        #region EX 2 - waiting on multiple tasks WaitAll/WaitAny
+        //#region EX 2 - waiting on multiple tasks WaitAll/WaitAny
+        //// waitany returns index to task
+        //static void Main(string[] args)
+        //{
+        //    // must do this, in case of console app - if wpf u have UI Thread Context
+        //    SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
+
+        //    Compute();
+
+        //    WriteLine(Environment.NewLine);
+        //    WriteLine("MAIN THREAD ENDED!");
+        //    ReadLine();
+        //}
+
+        //static void Compute()
+        //{
+        //    var result = GetData();
+
+        //    //int min = 0, max = 0;
+        //    //double avg = 0;
+        //    //double sumAll = 0;
+
+        //    Task<int> t_min = Task.Factory.StartNew(() =>
+        //    {
+        //        var min = result.Min();
+        //        return min;
+        //    });
+
+        //    Task<int> t_max = Task.Factory.StartNew(() =>
+        //    {
+        //        var max = result.Max();
+        //        return max;
+        //    });
+
+        //    Task<double> t_avg = Task.Factory.StartNew(() =>
+        //    {
+        //        var avg = result.Average();
+        //        return avg;
+        //    });
+
+        //    var t_sumAll = Task.Factory.StartNew(() =>
+        //    {
+        //        // must wait for tasks, otherwise will have 0
+        //        var sumAll = t_avg.Result + t_min.Result + t_max.Result;
+        //        return sumAll;
+
+        //    });
+
+        //    // don't has to use Wait(), .Result do this implicit
+
+        //    WriteLine("Min: " + t_min.Result);
+        //    WriteLine("Max: " + t_max.Result);
+        //    WriteLine("Avg: " + t_avg.Result);
+        //    WriteLine("Sum all: " + t_sumAll.Result);
+        //}
+
+        //static IList<int> GetData()
+        //{
+        //    var result = new List<int>();
+
+        //    var t_1 = GetDataFromNet();
+        //    var t_2 = GetDataFromNet();
+        //    var t_3 = GetDataFromNet();
+
+        //    result.AddRange(new[] { t_1, t_2, t_3 });
+
+        //    return result;
+        //}
+
+        //static int GetDataFromNet()
+        //{
+        //    var cnt = 1;
+        //    var end = new Random().Next(1, 10);
+        //    while (cnt <= end)
+        //    {
+        //        Thread.Sleep(100);
+        //        cnt++;
+        //    }
+
+        //    var result = new Random().Next(1, 9999);
+        //    return result;
+        //}
+        //#endregion
+
+        #region EX 3 - waiting on multiple tasks WaitAll
         // waitany returns index to task
         static void Main(string[] args)
         {
             // must do this, in case of console app - if wpf u have UI Thread Context
-            SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
+            //SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
 
             Compute();
+            Compute2().Wait();
+            Compute3();
 
             WriteLine(Environment.NewLine);
             WriteLine("MAIN THREAD ENDED!");
@@ -495,60 +582,108 @@ namespace Tasks.ConsoleApp
 
         static void Compute()
         {
-            var result = GetData();
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
 
-            //int min = 0, max = 0;
-            //double avg = 0;
-            //double sumAll = 0;
+            var tasks = new List<Task>();
+            (int, int, int) container = (0,0,0);
 
-            Task<int> t_min = Task.Factory.StartNew(() =>
-            {
-                var min = result.Min();
-                return min;
-            });
 
-            Task<int> t_max = Task.Factory.StartNew(() =>
-            {
-                var max = result.Max();
-                return max;
-            });
+            tasks.Add(new Task(() => {
+                container.Item1 = GetDataFromDb();
+                Thread.Sleep(3000);
+                Console.WriteLine("First task");
+            }));
 
-            Task<double> t_avg = Task.Factory.StartNew(() =>
-            {
-                var avg = result.Average();
-                return avg;
-            });
+            tasks.Add(new Task(() => {
+                container.Item2 = GetDataFromDb();
+                Thread.Sleep(2000);
+                Console.WriteLine("Second task");
+            }));
 
-            var t_sumAll = Task.Factory.StartNew(() =>
-            {
-                // must wait for tasks, otherwise will have 0
-                var sumAll = t_avg.Result + t_min.Result + t_max.Result;
-                return sumAll;
+            tasks.Add(new Task(() => {
+                container.Item3 = GetDataFromDb();
+                Thread.Sleep(1000);
+                Console.WriteLine("Third task");
+            }));
+            tasks.ForEach(t => t.Start());
+            Task.WaitAll(tasks.ToArray());
 
-            });
-
-            // don't has to use Wait(), .Result do this implicit
-
-            WriteLine("Min: " + t_min.Result);
-            WriteLine("Max: " + t_max.Result);
-            WriteLine("Avg: " + t_avg.Result);
-            WriteLine("Sum all: " + t_sumAll.Result);
+            sw.Stop();
+            Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
-        static IList<int> GetData()
+        static void Compute3()
         {
-            var result = new List<int>();
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
 
-            var t_1 = GetDataFromNet();
-            var t_2 = GetDataFromNet();
-            var t_3 = GetDataFromNet();
+            var tasks = new List<Task>();
+            (int, int, int) container = (0, 0, 0);
 
-            result.AddRange(new[] { t_1, t_2, t_3 });
 
-            return result;
+            tasks.Add(Task.Run(() => {
+                container.Item1 = GetDataFromDb();
+                Thread.Sleep(3000);
+                Console.WriteLine("First task");
+            }));
+
+            tasks.Add(Task.Run(() => {
+                container.Item2 = GetDataFromDb();
+                Thread.Sleep(2000);
+                Console.WriteLine("Second task");
+            }));
+
+            tasks.Add(Task.Run(() => {
+                container.Item3 = GetDataFromDb();
+                Thread.Sleep(1000);
+                Console.WriteLine("Third task");
+            }));
+           
+            Task.WaitAll(tasks.ToArray());
+
+            sw.Stop();
+            Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
-        static int GetDataFromNet()
+        static async Task Compute2()
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+
+            var tasks = new List<Func<Task>>();
+            (int, int, int) container = (0, 0, 0);
+
+
+            tasks.Add(async () => {
+                container.Item1 = GetDataFromDb();
+                Thread.Sleep(3000);
+                Console.WriteLine("First task");
+            });
+
+            tasks.Add(async () => {
+                container.Item2 = GetDataFromDb();
+                Thread.Sleep(2000);
+                Console.WriteLine("Second task");
+            });
+
+            tasks.Add(async () => {
+                container.Item3 = GetDataFromDb();
+                Thread.Sleep(1000);
+                Console.WriteLine("Third task");
+            });
+
+            foreach (var t in tasks)
+            {
+                await t();
+            }
+           
+
+            sw.Stop();
+            Console.WriteLine(sw.ElapsedMilliseconds);
+        }
+
+        static int GetDataFromDb()
         {
             var cnt = 1;
             var end = new Random().Next(1, 10);
