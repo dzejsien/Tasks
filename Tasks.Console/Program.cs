@@ -573,7 +573,7 @@ namespace Tasks.ConsoleApp
 
             Compute();
             Compute2().Wait();
-            Compute3();
+            Compute3().Wait();
 
             WriteLine(Environment.NewLine);
             WriteLine("MAIN THREAD ENDED!");
@@ -613,7 +613,7 @@ namespace Tasks.ConsoleApp
             Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
-        static void Compute3()
+        static async Task Compute3()
         {
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -639,8 +639,9 @@ namespace Tasks.ConsoleApp
                 Thread.Sleep(1000);
                 Console.WriteLine("Third task");
             }));
-           
-            Task.WaitAll(tasks.ToArray());
+
+            // better than Task.WaitAll https://msdn.microsoft.com/en-us/magazine/jj991977.aspx Figure 5
+            await Task.WhenAll(tasks.ToArray());
 
             sw.Stop();
             Console.WriteLine(sw.ElapsedMilliseconds);
